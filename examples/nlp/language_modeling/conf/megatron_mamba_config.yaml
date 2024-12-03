@@ -76,7 +76,7 @@ model:
   post_process: True # add pooler
   megatron_legacy: False
   persist_layer_norm: True
-
+  squared_relu_activation: True
   tokenizer:
     library: 'huggingface'
     type: 'EleutherAI/gpt-neox-20b' 

@@ -227,6 +227,7 @@ class NLPDDPStrategy(DDPStrategy):
         self.nccl_communicator_config_path = nccl_communicator_config_path
         self.sharp = sharp
         self._dist_ckpt_parallel_save = dist_ckpt_parallel_save
+        self.save_top_k = False
 
     def setup(self, trainer: "pl.Trainer") -> None:
         """
@@ -390,31 +391,36 @@ class NLPDDPStrategy(DDPStrategy):
         """
         # check if using distributed checkpointing
         if self.use_distributed_checkpointing:
-            # Check whether to save optim states
-            include_optimizer = True if not storage_options else storage_options.get('include_optimizer', True)
-            if include_optimizer:
-                assert (
-                    len(checkpoint['optimizer_states']) == 1
-                ), "Currently only support checkpointing 1 distributed optimizer per time!"
+            assert (
+                len(checkpoint['optimizer_states']) == 1
+            ), "Currently only support checkpointing 1 distributed optimizer per time!"
+            if self.save_top_k:
+                nemo_save_dir = Path(ckpt_to_dir(filepath)) / "checkpoint.nemo"
+                self.model.save_to(nemo_save_dir)
+            else:
                 # converts the optimizer states to their sharded equivalents
                 sharded_optim_state = self.optimizer_sharded_state_dict(
                     unsharded_optim_state=checkpoint['optimizer_states'][0]
                 )
-                checkpoint['optimizer_states'] = [sharded_optim_state]
-            else:
-                checkpoint['optimizer_states'] = None
-            # remove device state_dict
-            checkpoint['state_dict'] = OrderedDict([])
 
-            self.checkpoint_io.save_checkpoint(checkpoint, ckpt_to_dir(filepath), storage_options=storage_options)
+                # Check whether to save optim states
+                include_optimizer = True if not storage_options else storage_options.get('include_optimizer', True)
+                if include_optimizer:
+                    checkpoint['optimizer_states'] = [sharded_optim_state]
+                else:
+                    checkpoint['optimizer_states'] = None
+                # remove device state_dict
+                checkpoint['state_dict'] = OrderedDict([])
 
-            if HAVE_MODELOPT and hasattr(self.lightning_module, "get_model_module_list"):
-                save_sharded_modelopt_state(
-                    self.lightning_module.get_model_module_list(),
-                    ckpt_to_dir(filepath),
-                    self.unwrapped_checkpoint_io.save_sharded_strategy,
-                    prefix="model.",
-                )
+                self.checkpoint_io.save_checkpoint(checkpoint, ckpt_to_dir(filepath), storage_options=storage_options)
+
+                if HAVE_MODELOPT and hasattr(self.lightning_module, "get_model_module_list"):
+                    save_sharded_modelopt_state(
+                        self.lightning_module.get_model_module_list(),
+                        ckpt_to_dir(filepath),
+                        self.unwrapped_checkpoint_io.save_sharded_strategy,
+                        prefix="model.",
+                    )
         else:
             # PTL override to accomodate model parallel checkpoints
             filepath = inject_model_parallel_rank(filepath)
@@ -1083,53 +1089,14 @@ class NLPSaveRestoreConnector(SaveRestoreConnector):
                 )
 
             if should_move_data:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    if dist_ckpt:
-                        shutil.move(str(dist_ckpt_dir), tmpdir)
-                    elif app_state.pipeline_model_parallel_size == 1:
-                        # move weights to the tmpdir
-                        for tp_rank in range(app_state.tensor_model_parallel_size):
-                            os.makedirs(os.path.join(tmpdir, f'mp_rank_{tp_rank:02d}'))
-                            mp_model_weights = os.path.join(
-                                dir_name, f'mp_rank_{tp_rank:02d}_' + self.model_weights_ckpt
-                            )
-                            shutil.move(
-                                mp_model_weights,
-                                os.path.join(tmpdir, f'mp_rank_{tp_rank:02d}', self.model_weights_ckpt),
-                            )
-                    else:
-                        # move weights to the tmpdir
-                        for tp_rank, pp_rank in itertools.product(
-                            range(app_state.tensor_model_parallel_size),
-                            range(app_state.pipeline_model_parallel_size),
-                        ):
-                            os.makedirs(os.path.join(tmpdir, f'tp_rank_{tp_rank:02d}_pp_rank_{pp_rank:03d}'))
-                            mp_model_weights = os.path.join(
-                                dir_name, f'tp_rank_{tp_rank:02d}_pp_rank_{pp_rank:03d}_' + self.model_weights_ckpt
-                            )
-                            shutil.move(
-                                mp_model_weights,
-                                os.path.join(
-                                    tmpdir, f'tp_rank_{tp_rank:02d}_pp_rank_{pp_rank:03d}', self.model_weights_ckpt
-                                ),
-                            )
+                tmpdir = dist_ckpt_dir.parent
 
-                    # create config and artifacts in tmpdir
-                    config_yaml = os.path.join(tmpdir, self.model_config_yaml)
-                    model.to_config_file(path2yaml_file=config_yaml)
-                    if hasattr(model, 'artifacts') and model.artifacts is not None:
-                        self._handle_artifacts(model, nemo_file_folder=tmpdir)
-                        self._update_artifact_paths(model, path2yaml_file=config_yaml)
-
-                    # create tar file
-                    if self.pack_nemo_file:
-                        self._make_nemo_file_from_folder(save_path, tmpdir)
-                    else:
-                        # Get the folder path from the save_path and move all values inside the tmpdir to the folder
-                        folder_path = os.path.dirname(save_path)
-
-                        for file in os.listdir(tmpdir):
-                            shutil.move(os.path.join(tmpdir, file), folder_path)
+                # create config and artifacts in tmpdir
+                config_yaml = os.path.join(tmpdir, self.model_config_yaml)
+                model.to_config_file(path2yaml_file=config_yaml)
+                if hasattr(model, 'artifacts') and model.artifacts is not None:
+                    self._handle_artifacts(model, nemo_file_folder=tmpdir)
+                    self._update_artifact_paths(model, path2yaml_file=config_yaml)
 
             if torch.distributed.is_initialized():
                 torch.distributed.barrier()
