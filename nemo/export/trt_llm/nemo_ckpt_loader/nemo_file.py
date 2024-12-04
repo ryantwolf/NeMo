@@ -354,7 +354,7 @@ def build_tokenizer(tokenizer):
                         ids = ids.tolist()
                     return self.tokenizer.ids_to_text(ids)
 
-                encode = tokenizer.tokenizer.text_to_ids
+                encode = tokenizer.text_to_ids
             else:
                 raise NotImplementedError(f"Patching tokenizer methods for {type(tokenizer)} is not available")
 
