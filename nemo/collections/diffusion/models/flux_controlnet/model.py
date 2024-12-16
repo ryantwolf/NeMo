@@ -16,8 +16,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 from dataclasses import dataclass
-from typing import List, Callable
+from typing import List, Callable, Any, Optional
 from torch.nn import functional as F
+from nemo.utils import logging
 
 
 def zero_module(module):
@@ -233,7 +234,63 @@ class MegatronFluxControlNetModel(MegatronFluxModel):
         self.flux_controlnet_config = flux_controlnet_config
         self.optim.connect(self)
 
+        self._memory_profile_enabled = True
+        self._memory_profile_start_step = 0
+        self._memory_profile_end_step = 3
+        self._memory_profile_rank = 0
+        self._memory_profile_output_path = f'./'
+        self._memory_profile_started = False
+        self._memory_profile_complete = False
 
+
+    def on_train_batch_start(self, batch: Any, batch_idx: int, unused: int = 0) -> Optional[int]:
+        """PyTorch Lightning hook:
+        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-batch-start
+        We use it here to enable nsys profiling and dynamic freezing.
+        """
+
+        # nsys profiling
+        if self.device.type == 'cuda':
+            if hasattr(self, '_nsys_profile_enabled'):
+                if self._nsys_profile_enabled and not self._nsys_profile_started:
+                    if batch_idx >= self._nsys_profile_start_step and torch.distributed.get_rank() in self._nsys_profile_ranks:
+                        logging.info("====== Start nsys profiling ======")
+                        torch.cuda.cudart().cudaProfilerStart()
+                        if self._nsys_profile_gen_shape:
+                            torch.autograd.profiler.emit_nvtx(record_shapes=True).__enter__()
+                        self._nsys_profile_started = True
+
+            if hasattr(self, '_memory_profile_enabled'):
+                if self._memory_profile_enabled and not self._memory_profile_started:
+                    if batch_idx >= self._memory_profile_start_step and torch.distributed.get_rank() == self._memory_profile_rank:
+                        logging.info("====== Start CUDA memory profiling ======")
+                        torch.cuda.memory._record_memory_history(max_entries=100000)
+                        self._memory_profile_started = True
+
+
+    def on_train_batch_end(self, outputs, batch: Any, batch_idx: int, unused: int = 0) -> None:
+        """PyTorch Lightning hook:
+        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-batch-end
+        We use it here to enable nsys profiling.
+        """
+
+        if self.device.type == 'cuda':
+            if hasattr(self, '_nsys_profile_enabled'):
+                if self._nsys_profile_enabled and not self._nsys_profile_complete:
+                    if batch_idx >= self._nsys_profile_end_step and torch.distributed.get_rank() in self._nsys_profile_ranks:
+                        logging.info("====== End nsys profiling ======")
+                        torch.cuda.cudart().cudaProfilerStop()
+                        self._nsys_profile_complete = True
+
+            if hasattr(self, '_memory_profile_enabled'):
+                if self._memory_profile_enabled and not self._memory_profile_complete:
+                    if batch_idx >= self._memory_profile_end_step and torch.distributed.get_rank() == self._memory_profile_rank:
+                        logging.info("====== End CUDA memory profiling ======")
+                        torch.cuda.memory._dump_snapshot(
+                            f'{self._memory_profile_output_path}/memory_profile_rank{self._memory_profile_rank}.pickle'
+                        )
+                        torch.cuda.memory._record_memory_history(enabled=None)
+                        self._memory_profile_complete = True
 
     def configure_model(self):
         if not hasattr(self, "module"):
