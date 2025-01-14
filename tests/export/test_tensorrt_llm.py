@@ -20,6 +20,8 @@ from megatron.core.export.trtllm.model_to_trllm_mapping.default_conversion_dict 
 from nemo.export.tensorrt_llm import TensorRTLLM
 
 
+@pytest.mark.run_only_on('CPU')
+@pytest.mark.unit
 def test_get_nemo_to_trtllm_conversion_dict_on_nemo_model():
     dummy_state = object()
     model_state_dict = {
@@ -38,6 +40,8 @@ def test_get_nemo_to_trtllm_conversion_dict_on_nemo_model():
         assert pattern.match(key), f"Key '{key}' does not properly start with 'model.'"
 
 
+@pytest.mark.run_only_on('CPU')
+@pytest.mark.unit
 def test_get_nemo_to_trtllm_conversion_dict_on_mcore_model():
     dummy_state = object()
     model_state_dict = {
