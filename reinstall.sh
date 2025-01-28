@@ -6,26 +6,21 @@ HEAVY_DEPS=${HEAVY_DEPS:-false}
 
 PIP=pip
 
+export MAMBA_FORCE_BUILD=TRUE
+export MAMBA_TAG=v2.2.0
+export CAUSAL_CONV1D_FORCE_BUILD=TRUE
+export CAUSAL_CONV_TAG=v1.2.2.post1
+export TE_TAG=${TE:-7d576ed25266a17a7b651f2c12e8498f67e0baea}
+export NEMO_RUN_TAG=${NEMO_RUN_TAG:-34259bd3e752fef94045a9a019e4aaf62bd11ce2}
+export APEX_TAG=${APEX:-810ffae374a2b9cb4b5c5e28eaeca7d7998fca0c}
+export MCORE_TAG=${MCORE_TAG:-4dc8977167d71f86bdec47a60a98e85c4cfa0031}
+export NV_RESILIENCY_EXT_TAG=${NV_RESILIENCY_EXT_TAG:-97aad77609d2e25ed38ac5c99f0c13f93c48464e}
+
 ${PIP} install -U ${PIP}
 
 echo 'Uninstalling stuff'
-${PIP} uninstall -y nemo_toolkit
-${PIP} uninstall -y sacrebleu
-
-# Kept for legacy purposes
-${PIP} uninstall -y nemo_asr
-${PIP} uninstall -y nemo_nlp
-${PIP} uninstall -y nemo_tts
-
-export MAMBA_FORCE_BUILD=TRUE
-export CAUSAL_CONV1D_FORCE_BUILD=TRUE
-export TE_TAG=7d576ed25266a17a7b651f2c12e8498f67e0baea
-export NEMO_RUN_TAG=34259bd3e752fef94045a9a019e4aaf62bd11ce2
-export APEX_TAG=810ffae374a2b9cb4b5c5e28eaeca7d7998fca0c
-export CAUSAL_CONV_TAG=v1.2.2.post1
-export MAMBA_TAG=v2.2.0
-export MCORE_TAG=4dc8977167d71f86bdec47a60a98e85c4cfa0031
-export NV_RESILIENCY_EXT_TAG=97aad77609d2e25ed38ac5c99f0c13f93c48464e
+# Some of these packages are uninstalled for legacy purposes
+${PIP} uninstall -y nemo_toolkit sacrebleu nemo_asr nemo_nlp nemo_tts
 
 if [ -n "${NVIDIA_PYTORCH_VERSION}" ]; then
   echo "Installing NeMo in NVIDIA PyTorch container: ${NVIDIA_PYTORCH_VERSION}"
