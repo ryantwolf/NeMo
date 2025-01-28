@@ -29,7 +29,7 @@ if [ -n "${NVIDIA_PYTORCH_VERSION}" ]; then
 
   echo "Installing Apex:"
   cd /opt
-  git clone https://github.com/NVIDIA/apex.git &&
+  git clone https://github.com/NVIDIA/apex.git || true &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
     pip install --no-build-isolation . &&
@@ -44,7 +44,7 @@ else
 
   ${PIP} install torch
   cd /opt
-  git clone https://github.com/NVIDIA/apex.git &&
+  git clone https://github.com/NVIDIA/apex.git || true &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
     pip install . &&
@@ -79,13 +79,13 @@ if [[ "$HEAVY_DEPS" == "TRUE" ]]; then
 
   CURR=$(pwd)
   cd /opt
-  git clone https://github.com/NVIDIA/Megatron-LM.git &&
+  git clone https://github.com/NVIDIA/Megatron-LM.git || true &&
     pushd Megatron-LM &&
     git checkout ${MCORE_TAG} &&
     pip install -e . &&
     popd
 
-  git clone https://github.com/NVIDIA/TransformerEngine.git &&
+  git clone https://github.com/NVIDIA/TransformerEngine.git  || true &&
     pushd TransformerEngine &&
     git checkout ${TE_TAG} &&
     git submodule update --init --recursive -q &&
