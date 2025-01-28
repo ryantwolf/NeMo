@@ -26,7 +26,14 @@ if [ -n "${NVIDIA_PYTORCH_VERSION}" ]; then
   echo "Installing NeMo in NVIDIA PyTorch container: ${NVIDIA_PYTORCH_VERSION}"
 
   echo "Will not install numba"
-  ${PIP} install --no-build-isolation "apex @ git+https://github.com/NVIDIA/apex.git@${APEX_TAG}"
+
+  echo "Installing Apex:"
+  cd /opt
+  git clone https://github.com/NVIDIA/apex.git &&
+    pushd apex &&
+    git checkout ${APEX_TAG} &&
+    pip install -e --no-build-isolation . &&
+    popd
 
 else
   if [ -n "${CONDA_PREFIX}" ]; then
@@ -36,7 +43,12 @@ else
   fi
 
   ${PIP} install torch
-  ${PIP} install "apex @ git+https://github.com/NVIDIA/apex.git@${APEX_TAG}"
+  cd /opt
+  git clone https://github.com/NVIDIA/apex.git &&
+    pushd apex &&
+    git checkout ${APEX_TAG} &&
+    pip install -e . &&
+    popd
 
 fi
 
