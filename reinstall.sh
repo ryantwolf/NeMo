@@ -29,7 +29,7 @@ if [ -n "${NVIDIA_PYTORCH_VERSION}" ]; then
 
   echo "Installing Apex:"
   cd /opt
-  git clone https://github.com/NVIDIA/apex.git || true &&
+  (git clone https://github.com/NVIDIA/apex.git || true) &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
     pip install --no-build-isolation . &&
@@ -44,7 +44,7 @@ else
 
   ${PIP} install torch
   cd /opt
-  git clone https://github.com/NVIDIA/apex.git || true &&
+  (git clone https://github.com/NVIDIA/apex.git || true) &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
     pip install . &&
