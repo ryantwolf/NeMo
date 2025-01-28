@@ -32,7 +32,7 @@ if [ -n "${NVIDIA_PYTORCH_VERSION}" ]; then
   git clone https://github.com/NVIDIA/apex.git &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
-    pip install -e --no-build-isolation . &&
+    pip install --no-build-isolation . &&
     popd
 
 else
@@ -47,7 +47,7 @@ else
   git clone https://github.com/NVIDIA/apex.git &&
     pushd apex &&
     git checkout ${APEX_TAG} &&
-    pip install -e . &&
+    pip install . &&
     popd
 
 fi
