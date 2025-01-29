@@ -3,6 +3,7 @@ set -ex
 
 INSTALL_OPTION=${1:-"dev"}
 HEAVY_DEPS=${HEAVY_DEPS:-false}
+CURR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 PIP=pip
 
@@ -79,7 +80,6 @@ if [[ "$HEAVY_DEPS" == "TRUE" ]]; then
 
   pip install --no-cache-dir -r tools/ctc_segmentation/requirements.txt
 
-  CURR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   cd /opt
   git clone https://github.com/NVIDIA/Megatron-LM.git || true &&
     pushd Megatron-LM &&
@@ -102,6 +102,7 @@ echo 'Installing dependencies of nemo'
 ${PIP} install --no-cache-dir --extra-index-url https://pypi.nvidia.com "${DEPS[@]}"
 
 echo 'Installing nemo'
+cd $CURR
 if [[ "$INSTALL_OPTION" == "dev" ]]; then
   ${PIP} install --editable ".[all]"
 
