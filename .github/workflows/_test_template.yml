@@ -86,6 +86,7 @@ jobs:
           with:
             timeout_seconds: ${{ inputs.TIMEOUT }}
             max_attempts: 3
+            shell: bash
             retry_on: timeout
             command: |
               set -x
