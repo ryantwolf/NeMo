@@ -63,12 +63,19 @@ jobs:
             docker pull nemoci.azurecr.io/nemo_container:${{ github.run_id }}
 
         - name: Start container
+          
+          env:
+            DIR: ${{ github.run_id }}
           run: |
             ARG=("")
             if [[ "${{ inputs.RUNNER }}" != *cpu* ]]; then
               ARG=("--runtime=nvidia --gpus all")
             fi
 
+            cmd=$(cat <<RUN_TEST_EOF
+            #!/bin/bash
+            docker container stop nemo_container_${{ github.run_id }} || true
+            docker container rm nemo_container_${{ github.run_id }} || true
             docker run \
               --rm \
               -d \
@@ -79,6 +86,11 @@ jobs:
               --env HF_HOME=/home/TestData/HF_HOME \
               --volume /mnt/datadrive/TestData:/home/TestData nemoci.azurecr.io/nemo_container:${{ github.run_id }} \
               bash -c "sleep $(( ${{ inputs.TIMEOUT }} * 60 + 60 ))"
+            RUN_TEST_EOF
+            )
+            
+            echo "$cmd" | tee -a "$DIR/retry_job.sh"
+            bash $DIR/retry_job.sh
         
         - name: Create run-script
           env:
@@ -102,7 +114,7 @@ jobs:
 
             EXIT_CODE=$?
             set +e
-
+            set +x
             log=$(tail -c 2000 err.log |  base64 -w 0)
             echo "log=$log" >> "$GITHUB_OUTPUT"
 
@@ -112,7 +124,6 @@ jobs:
             coverage_report=coverage-${{ github.run_id }}-$(uuidgen)
             echo "coverage_report=$coverage_report" >> "$GITHUB_OUTPUT"
 
-            docker exec nemo_container_${{ github.run_id }} bash -c 'ls -al'
             docker cp nemo_container_${{ github.run_id }}:/workspace/.coverage .coverage 
 
             exit $EXIT_CODE
@@ -134,24 +145,7 @@ jobs:
             shell: bash
             retry_on: timeout
             command: /bin/bash ${{ github.run_id }}/job.sh 
-            # on_retry_command: |
-            #   docker container stop nemo_container_${{ github.run_id }} || true
-            #   docker container rm nemo_container_${{ github.run_id }} || true
-            #   ARG=("")
-            #   if [[ "${{ inputs.RUNNER }}" != *cpu* ]]; then
-            #     ARG=("--runtime=nvidia --gpus all")
-            #   fi
-
-            #   docker run \
-            #     --rm \
-            #     -d \
-            #     --name nemo_container_${{ github.run_id }} ${ARG[@]} \
-            #     --shm-size=64g \
-            #     --env TRANSFORMERS_OFFLINE=0 \
-            #     --env HYDRA_FULL_ERROR=1 \
-            #     --env HF_HOME=/home/TestData/HF_HOME \
-            #     --volume /mnt/datadrive/TestData:/home/TestData nemoci.azurecr.io/nemo_container:${{ github.run_id }} \
-            #     bash -c "sleep $(( ${{ inputs.TIMEOUT }} * 60 + 60 ))"
+            on_retry_command: /bin/bash ${{ github.run_id }}/retry_job.sh 
         
         - name: Upload artifacts
           uses: actions/upload-artifact@v4
