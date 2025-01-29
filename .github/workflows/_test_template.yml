@@ -76,6 +76,7 @@ jobs:
             cmd=$(cat <<RUN_TEST_EOF
             #!/bin/bash
             docker container stop nemo_container_${{ github.run_id }} || true
+            docker wait nemo_container_${{ github.run_id }} || true
             docker container rm nemo_container_${{ github.run_id }} || true
             docker run \
               --rm \
