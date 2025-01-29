@@ -94,7 +94,12 @@ jobs:
             set +e
 
             set -e
-            docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}' 2> >(tee err.log)
+            (
+              set -e
+
+              docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}'
+            ) 2> err.log | tee err.log
+
             EXIT_CODE=$?
             set +e
             
