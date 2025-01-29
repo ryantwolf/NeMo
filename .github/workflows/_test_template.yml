@@ -63,12 +63,11 @@ jobs:
             docker pull nemoci.azurecr.io/nemo_container:${{ github.run_id }}
 
         - name: Start container
-          
           env:
             DIR: ${{ github.run_id }}
           run: |
             mkdir -p $DIR
-            
+
             ARG=("")
             if [[ "${{ inputs.RUNNER }}" != *cpu* ]]; then
               ARG=("--runtime=nvidia --gpus all")
