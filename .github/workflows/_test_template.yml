@@ -79,6 +79,43 @@ jobs:
               --env HF_HOME=/home/TestData/HF_HOME \
               --volume /mnt/datadrive/TestData:/home/TestData nemoci.azurecr.io/nemo_container:${{ github.run_id }} \
               bash -c "sleep $(( ${{ inputs.TIMEOUT }} * 60 + 60 ))"
+        
+        - name: Create run-script
+          env:
+            DIR: ${{ github.run_id }}
+          run: |
+            cat << EOF > $DIR/job.sh
+            #!/bin/bash
+
+            set -x
+            mkdir -p ${{ github.run_id }}
+            cd ${{ github.run_id }}/
+            rm .coverage || true
+            set +e 
+            (  
+              set -e
+
+              docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}'
+            ) 2> >(tee err.log)
+
+            EXIT_CODE=$?
+
+            set -x
+
+            log=$(tail -c 2000 err.log |  base64 -w 0)
+            echo "log=$log" >> "$GITHUB_OUTPUT"
+            
+            potential_infra_failure=$(cat err.log | grep -Eqiw "device" && echo true || echo false)
+            echo "potential_infra_failure=$potential_infra_failure" >> "$GITHUB_OUTPUT"
+
+            coverage_report=coverage-${{ github.run_id }}-$(uuidgen)
+            echo "coverage_report=$coverage_report" >> "$GITHUB_OUTPUT"
+
+            docker exec nemo_container_${{ github.run_id }} bash -c 'ls -al'
+            docker cp nemo_container_${{ github.run_id }}:/workspace/.coverage .coverage 
+
+            exit $EXIT_CODE
+            EOF
 
         - id: main
           name: Run main script
@@ -88,35 +125,7 @@ jobs:
             max_attempts: 3
             shell: bash
             retry_on: timeout
-            command: |
-              set -x
-              mkdir -p ${{ github.run_id }}
-              cd ${{ github.run_id }}/
-              rm .coverage || true
-              set +e 
-              (  
-                set -e
-
-                docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}'
-              ) 2> >(tee err.log)
-
-              EXIT_CODE=$?
-
-              set -x
-
-              log=$(tail -c 2000 err.log |  base64 -w 0)
-              echo "log=$log" >> "$GITHUB_OUTPUT"
-              
-              potential_infra_failure=$(cat err.log | grep -Eqiw "device" && echo true || echo false)
-              echo "potential_infra_failure=$potential_infra_failure" >> "$GITHUB_OUTPUT"
-
-              coverage_report=coverage-${{ github.run_id }}-$(uuidgen)
-              echo "coverage_report=$coverage_report" >> "$GITHUB_OUTPUT"
-
-              docker exec nemo_container_${{ github.run_id }} bash -c 'ls -al'
-              docker cp nemo_container_${{ github.run_id }}:/workspace/.coverage .coverage 
-
-              exit $EXIT_CODE
+            command: bash ${{ github.run_id }}/job.sh 
             on_retry_command: |
               docker container stop nemo_container_${{ github.run_id }} || true
               docker container rm nemo_container_${{ github.run_id }} || true
