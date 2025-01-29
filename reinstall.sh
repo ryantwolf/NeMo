@@ -79,7 +79,7 @@ if [[ "$HEAVY_DEPS" == "TRUE" ]]; then
 
   pip install --no-cache-dir -r tools/ctc_segmentation/requirements.txt
 
-  CURR=$(pwd)
+  CURR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
   cd /opt
   git clone https://github.com/NVIDIA/Megatron-LM.git || true &&
     pushd Megatron-LM &&
