@@ -74,9 +74,15 @@ if [[ "$HEAVY_DEPS" == "TRUE" ]]; then
     "llama-index==0.10.43"
     "unstructured==0.14.9"
     "git+https://github.com/Dao-AILab/causal-conv1d.git@${CAUSAL_CONV_TAG}"
-    "git+https://github.com/state-spaces/mamba.git@${MAMBA_TAG}"
     "triton==3.1.0"
   )
+  
+  cd /opt
+  git clone https://github.com/state-spaces/mamba.git && \
+    cd mamba && \
+    git checkout ${MAMBA_TAG} && \
+    sed -i "/triton/d" setup.py && \
+    pip3 wheel -v .
 
   pip install --no-cache-dir -r tools/ctc_segmentation/requirements.txt
 
