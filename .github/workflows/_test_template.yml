@@ -117,7 +117,7 @@ jobs:
           name: Run main script
           uses: nick-fields/retry@v3
           with:
-            timeout_seconds: ${{ inputs.TIMEOUT }}
+            timeout_seconds: 10 * 60 + 60
             max_attempts: 3
             shell: bash
             retry_on: timeout
