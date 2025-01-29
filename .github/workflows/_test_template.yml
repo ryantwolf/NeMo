@@ -91,17 +91,13 @@ jobs:
             mkdir -p ${{ github.run_id }}
             cd ${{ github.run_id }}/
             rm .coverage || true
-            set +e 
-            (  
-              set -e
+            set +e
 
-              docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}'
-            )
-
+            set -e
+            docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }}'
             EXIT_CODE=$?
-
-            set -x
-
+            set +e
+            
             log=$(tail -c 2000 err.log |  base64 -w 0)
             echo "log=$log" >> "$GITHUB_OUTPUT"
             
