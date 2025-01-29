@@ -113,11 +113,15 @@ jobs:
             exit $EXIT_CODE
             EOF
 
+        - name: Timeout in seconds
+          id: timeout_in_seconds
+          run: echo "main=$(( ${{ inputs.TIMEOUT }} * 60 ))" | tee -a "$GITHUB_OUTPUT"
+
         - id: main
           name: Run main script
           uses: nick-fields/retry@v3
           with:
-            timeout_seconds: 10 * 60 + 60
+            timeout_seconds: ${{ steps.timeout_in_seconds.outputs.main }}
             max_attempts: 3
             shell: bash
             retry_on: timeout
