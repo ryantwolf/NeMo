@@ -84,9 +84,9 @@ jobs:
           env:
             DIR: ${{ github.run_id }}
           run: |
-            cat << EOF > $DIR/job.sh
+            $(cat <<"RUN_TEST_EOF"
             #!/bin/bash
-
+              
             set -x
             mkdir -p ${{ github.run_id }}
             cd ${{ github.run_id }}/
@@ -102,10 +102,10 @@ jobs:
 
             EXIT_CODE=$?
             set +e
-            
+
             log=$(tail -c 2000 err.log |  base64 -w 0)
             echo "log=$log" >> "$GITHUB_OUTPUT"
-            
+
             potential_infra_failure=$(cat err.log | grep -Eqiw "device" && echo true || echo false)
             echo "potential_infra_failure=$potential_infra_failure" >> "$GITHUB_OUTPUT"
 
@@ -116,7 +116,10 @@ jobs:
             docker cp nemo_container_${{ github.run_id }}:/workspace/.coverage .coverage 
 
             exit $EXIT_CODE
-            EOF
+            RUN_TEST_EOF
+            )
+            
+            echo "$cmd" | tee -a "$DIR/job.sh"
 
         - name: Timeout in seconds
           id: timeout_in_seconds
