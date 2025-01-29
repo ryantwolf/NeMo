@@ -84,7 +84,7 @@ jobs:
           env:
             DIR: ${{ github.run_id }}
           run: |
-            $(cat <<"RUN_TEST_EOF"
+            cmd=$(cat <<"RUN_TEST_EOF"
             #!/bin/bash
               
             set -x
