@@ -75,9 +75,7 @@ jobs:
 
             cmd=$(cat <<RUN_TEST_EOF
             #!/bin/bash
-            docker container stop nemo_container_${{ github.run_id }} || true
-            docker wait nemo_container_${{ github.run_id }} || true
-            docker container rm nemo_container_${{ github.run_id }} || true
+            docker container rm -f nemo_container_${{ github.run_id }} || true
             docker run \
               --rm \
               -d \
@@ -167,5 +165,4 @@ jobs:
         - name: Container shutdown
           if: always()
           run: |
-            docker container stop nemo_container_${{ github.run_id }} || true
-            docker container rm nemo_container_${{ github.run_id }} || true
+            docker container rm -f nemo_container_${{ github.run_id }} || true
