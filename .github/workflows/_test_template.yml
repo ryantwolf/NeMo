@@ -89,7 +89,7 @@ jobs:
             RUN_TEST_EOF
             )
             
-            echo "$cmd" | tee -a "$DIR/retry_job.sh"
+            echo "$cmd" | tee "$DIR/retry_job.sh"
             bash $DIR/retry_job.sh
         
         - name: Create run-script
@@ -130,7 +130,7 @@ jobs:
             RUN_TEST_EOF
             )
             
-            echo "$cmd" | tee -a "$DIR/job.sh"
+            echo "$cmd" | tee "$DIR/job.sh"
 
         - name: Timeout in seconds
           id: timeout_in_seconds
