@@ -123,9 +123,9 @@ jobs:
           with:
             timeout_seconds: ${{ inputs.TIMEOUT }}
             max_attempts: 3
-            shell: bash
+            shell: bash -x -e -u -o pipefail {0}
             retry_on: timeout
-            command: bash ${{ github.run_id }}/job.sh 
+            command: /bin/bash ${{ github.run_id }}/job.sh 
             on_retry_command: |
               docker container stop nemo_container_${{ github.run_id }} || true
               docker container rm nemo_container_${{ github.run_id }} || true
