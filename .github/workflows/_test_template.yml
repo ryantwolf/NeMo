@@ -111,7 +111,7 @@ jobs:
             (
               set -e
 
-              docker exec nemo_container_${{ github.run_id }} bash -c '$(echo $SCRIPT) && echo "Finished successfully." || echo "Did not finish.'
+              docker exec nemo_container_${{ github.run_id }} bash -c '$SCRIPT && echo "Finished successfully." || echo "Did not finish.'
             ) 2> $DIR/err.log | tee $DIR/err.log
 
             RUN_TEST_EOF
