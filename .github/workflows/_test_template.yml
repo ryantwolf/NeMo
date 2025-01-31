@@ -109,7 +109,7 @@ jobs:
             (
               set -e
 
-              docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }} && echo "Finished successfully." || echo "Did not finish."'
+              docker exec nemo_container_${{ github.run_id }} bash -c '${{ inputs.SCRIPT }} \ && echo "Finished successfully." || echo "Did not finish."'
             ) 2> err.log | tee err.log
 
             EXIT_CODE=$?
